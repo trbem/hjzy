@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Model files (large files - should be stored separately)
+models/*.pth
+models/*.onnx
+models/*.h
+models/*.bin
+models/*.tflite
+
+# Data files (large files - should be stored separately)
+fer2013_data/
+*.jpg
+*.png
+*.jpeg
+*.bmp
+
+# Test samples
+test_samples/
+error_samples.txt
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+
+# C/C++ build
+*.o
+*.a
+*.so
+build/
+cmake-build-*/
+
+# ESP-IDF
+build/
+sdkconfig
+sdkconfig.old
+*.elf
+
+# Jupyter
+.ipynb_checkpoints
+
+# Matplotlib
+.mat
