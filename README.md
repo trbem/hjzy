@@ -9,14 +9,24 @@
 - 模型导出 (ONNX/C 权重)
 - C 语言推理库
 - ESP32-S3 嵌入式部署
+- **PC 端网页实时推理（新增）**
 
 ## ✨ 主要功能
 
+### 嵌入式端
 - 📷 实时摄像头采集 (OV2640)
 - 🧠 深度学习表情识别 (SimpleCNN)
 - 📡 WiFi 无线传输
 - 🌐 Web 界面实时显示
 - 🔧 支持 SD 卡存储模型
+
+### PC 端网页（新增）
+- 🖥️ Flask HTTP 服务器
+- 📸 摄像头实时识别
+- 🖼️ 图片上传识别
+- 😊 表情 emoji 显示
+- 💬 推荐话语反馈
+- 📜 历史记录（最近 10 条）
 
 ## 🏗️ 项目结构
 
@@ -46,6 +56,9 @@ rlsb/
 │   ├── prepare_fer2013.py             # FER2013 数据准备
 │   ├── prepare_data.py                # 数据预处理
 │   ├── test_model.py                  # 模型测试
+│   ├── emotion_server.py              # Flask 推理服务器 ⭐新增
+│   ├── emotion_web/                   # 网页前端 ⭐新增
+│   │   └── index.html                 # 网页界面
 │   └── models/
 │       └── best_model.pth             # 训练好的模型
 │
@@ -76,7 +89,7 @@ rlsb/
 python --version  # 需要 Python 3.8+
 
 # 安装依赖
-pip install torch torchvision numpy opencv-python matplotlib
+pip install torch torchvision numpy opencv-python matplotlib flask
 ```
 
 ### 2. 数据准备
@@ -115,6 +128,57 @@ python train_emotion_model/convert_to_tflite.py
 python train_emotion_model/export_weights.py
 ```
 
+## 🌐 PC 端网页测试（新增）
+
+### 启动服务器
+
+```bash
+cd train_emotion_model
+python emotion_server.py
+```
+
+服务器启动后会在控制台显示访问地址：
+```
+==================================================
+Emotion Recognition Server
+==================================================
+Server URL: http://0.0.0.0:5000
+Open in browser to start using!
+==================================================
+```
+
+### 访问网页
+
+打开浏览器访问 **http://127.0.0.1:5000**
+
+### 功能说明
+
+#### 1. 摄像头实时识别
+- 点击"开启摄像头"按钮
+- 系统每 1 秒自动识别一次表情
+- 实时显示识别结果和置信度
+
+#### 2. 图片上传识别
+- 切换到"上传图片"标签
+- 选择图片文件
+- 点击"开始识别"按钮
+
+#### 3. 识别结果展示
+- 😊 **表情 emoji** - 直观显示识别结果
+- 📊 **置信度百分比** - 三种表情的概率分布
+- 💬 **推荐话语** - 根据表情给出温暖回应
+
+| 表情 | Emoji | 推荐话语 |
+|------|-------|----------|
+| happy | 😊 | 你看起来很开心！分享一下你的快乐吧！ |
+| cry | 😢 | 一切都会好起来的，加油！ |
+| angry | 😠 | 深呼吸，冷静一下，别生气。 |
+
+#### 4. 历史记录
+- 自动保存最近 10 条识别记录
+- 显示表情、置信度和时间
+- 页面刷新后清空
+
 ## 📊 模型信息
 
 | 属性 | 值 |
@@ -150,6 +214,18 @@ train_model(data_dir='fer2013_3class', epochs=50, batch_size=32)
 
 # 导出权重
 export_weights(model_path='models/best_model.pth', output='models/emotion_model_weights.h')
+```
+
+### Flask 服务器 API
+
+```python
+# POST /predict - 图片上传推理
+# 请求体：{"image": "base64_encoded_image"}
+# 响应：{"emotion": "happy", "confidence": 0.85, "probabilities": {...}}
+
+# GET /stream - 摄像头视频流 (MJPEG)
+# GET /history - 获取历史记录
+# POST /clear_history - 清空历史记录
 ```
 
 ## 📦 硬件要求
@@ -188,6 +264,7 @@ export_weights(model_path='models/best_model.pth', output='models/emotion_model_
 - opencv-python >= 4.5.0
 - matplotlib >= 3.5.0
 - Pillow >= 9.0.0
+- **flask >= 3.0.0** ⭐新增
 
 ### ESP-IDF
 - ESP-IDF v5.0+
