@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表情识别系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; color: white; margin-bottom: 30px; }
+        header h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        header p { font-size: 1.1em; opacity: 0.9; }
+        .main-content { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        @media (max-width: 900px) { .main-content { grid-template-columns: 1fr; } }
+        .card { background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; }
+        .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; font-size: 1.1em; font-weight: 600; }
+        .card-body { padding: 20px; }
+        .preview-container { position: relative; width: 100%; background: #1a1a2e; border-radius: 12px; overflow: hidden; min-height: 360px; display: flex; align-items: center; justify-content: center; }
+        #cameraPreview, #imagePreview { width: 100%; height: auto; display: block; }
+        #imagePreview { max-height: 360px; object-fit: contain; }
+        .preview-placeholder { color: #666; text-align: center; padding: 40px; }
+        .preview-placeholder .icon { font-size: 4em; margin-bottom: 10px; }
+        .controls { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .btn { flex: 1; min-width: 120px; padding: 12px 20px; border: none; border-radius: 8px; font-size: 1em; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        .btn-secondary:hover { background: #d0d0d0; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-danger:hover { background: #d32f2f; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .file-upload { position: relative; display: inline-block; width: 100%; }
+        .file-upload input[type="file"] { display: none; }
+        .file-upload-label { display: block; padding: 12px 20px; background: #f5f5f5; border: 2px dashed #ccc; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
+        .file-upload-label:hover { border-color: #667eea; background: #f0f0ff; }
+        .result-card { text-align: center; }
+        .emotion-emoji { font-size: 5em; margin: 10px 0; animation: bounce 0.5s ease; }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .emotion-name { font-size: 2em; font-weight: 700; margin: 10px 0; text-transform: capitalize; }
+        .emotion-message { font-size: 1.2em; color: #666; margin: 15px 0; padding: 15px; background: #f5f5f5; border-radius: 8px; font-style: italic; }
+        .probability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+        .probability-item { text-align: center; padding: 10px; background: #f5f5f5; border-radius: 8px; }
+        .probability-item .label { font-size: 0.85em; color: #666; text-transform: capitalize; }
+        .probability-item .value { font-size: 1.1em; font-weight: 600; margin-top: 5px; }
+        .history-list { max-height: 400px; overflow-y: auto; }
+        .history-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee; transition: background 0.3s ease; }
+        .history-item:hover { background: #f9f9f9; }
+        .history-item:last-child { border-bottom: none; }
+        .history-emoji { font-size: 2em; margin-right: 12px; }
+        .history-info { flex: 1; }
+        .history-emotion { font-weight: 600; text-transform: capitalize; }
+        .history-confidence { font-size: 0.85em; color: #666; }
+        .history-time { font-size: 0.75em; color: #999; }
+        .empty-history { text-align: center; color: #999; padding: 40px 20px; }
+        .status-indicator { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #f5f5f5; border-radius: 20px; font-size: 0.9em; margin-top: 10px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #4CAF50; animation: pulse 2s infinite; }
+        .status-dot.error { background: #f44336; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
+        .tab:hover { background: #f5f5f5; }
+        .tab.active { border-bottom-color: #667eea; color: #667eea; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8em; }
+            .emotion-emoji { font-size: 3.5em; }
+            .probability-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>😊 表情识别系统</h1>
+            <p>实时识别你的表情，给出温暖的回应</p>
+        </header>
+        <div class="main-content">
+            <div class="card">
+                <div class="card-header">📷 输入</div>
+                <div class="card-body">
+                    <div class="tabs">
+                        <div class="tab active" data-tab="camera">摄像头</div>
+                        <div class="tab" data-tab="upload">上传图片</div>
+                    </div>
+                    <div class="tab-content active" id="camera-tab">
+                        <div class="preview-container">
+                            <video id="cameraPreview" autoplay playsinline style="display:none;"></video>
+                            <div class="preview-placeholder" id="cameraPlaceholder">
+                                <div class="icon">📷</div>
+                                <p>点击"开启摄像头"开始</p>
+                            </div>
+                        </div>
+                        <div class="controls">
+                            <button class="btn btn-primary" id="startCameraBtn"><span>📷</span> 开启摄像头</button>
+                            <button class="btn btn-danger" id="stopCameraBtn" disabled><span>⏹️</span> 停止</button>
+                        </div>
+                        <div class="status-indicator" id="cameraStatus" style="display: none;">
+                            <span class="status-dot"></span>
+                            <span id="cameraStatusText">摄像头运行中</span>
+                        </div>
+                    </div>
+                    <div class="tab-content" id="upload-tab">
+                        <div class="preview-container">
+                            <img id="imagePreview" style="display: none;">
+                            <div class="preview-placeholder" id="uploadPlaceholder">
+                                <div class="icon">🖼️</div>
+                                <p>选择图片上传</p>
+                            </div>
+                        </div>
+                        <div class="file-upload" style="margin-top: 15px;">
+                            <label class="file-upload-label">
+                                <input type="file" id="imageInput" accept="image/*">📁 选择图片
+                            </label>
+                        </div>
+                        <div class="controls">
+                            <button class="btn btn-primary" id="predictBtn" disabled><span>🔍</span> 开始识别</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <div class="card-header">🎯 识别结果</div>
+                    <div class="card-body result-card">
+                        <div id="resultContent">
+                            <div class="preview-placeholder">
+                                <div class="icon">😐</div>
+                                <p>等待识别...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📜 历史记录</span>
+                        <button class="btn btn-secondary" id="clearHistoryBtn" style="padding: 5px 10px; font-size: 0.8em;">清空</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="history-list" id="historyList">
+                            <div class="empty-history"><p>暂无历史记录</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const EMOTION_CONFIG = {
+            'happy': { emoji: '😊', color: '#4CAF50', message: '你看起来很开心！分享一下你的快乐吧！' },
+            'cry': { emoji: '😢', color: '#2196F3', message: '一切都会好起来的，加油！' },
+            'angry': { emoji: '😠', color: '#F44336', message: '深呼吸，冷静一下，别生气。' }
+        };
+        let stream = null;
+        let isCameraRunning = false;
+        let historyData = [];
+        let autoPredictInterval = null;
+        const cameraPreview = document.getElementById('cameraPreview');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const imagePreview = document.getElementById('imagePreview');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const imageInput = document.getElementById('imageInput');
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const stopCameraBtn = document.getElementById('stopCameraBtn');
+        const predictBtn = document.getElementById('predictBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const resultContent = document.getElementById('resultContent');
+        const historyList = document.getElementById('historyList');
+        const cameraStatus = document.getElementById('cameraStatus');
+        const cameraStatusText = document.getElementById('cameraStatusText');
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+            });
+        });
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+                cameraPreview.srcObject = stream;
+                cameraPreview.style.display = 'block';
+                cameraPlaceholder.style.display = 'none';
+                startCameraBtn.disabled = true;
+                stopCameraBtn.disabled = false;
+                isCameraRunning = true;
+                cameraStatus.style.display = 'inline-flex';
+                cameraStatusText.textContent = '摄像头运行中 - 自动识别';
+                startAutoPredict();
+            } catch (err) {
+                console.error('无法访问摄像头:', err);
+                alert('无法访问摄像头，请检查权限设置');
+                cameraStatus.classList.add('error');
+                cameraStatusText.textContent = '摄像头访问失败';
+                cameraStatus.style.display = 'inline-flex';
+            }
+        });
+        stopCameraBtn.addEventListener('click', () => {
+            if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
+            cameraPreview.style.display = 'none';
+            cameraPlaceholder.style.display = 'block';
+            startCameraBtn.disabled = false;
+            stopCameraBtn.disabled = true;
+            isCameraRunning = false;
+            cameraStatus.style.display = 'none';
+            if (autoPredictInterval) { clearInterval(autoPredictInterval); autoPredictInterval = null; }
+        });
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    imagePreview.src = event.target.result;
+                    imagePreview.style.display = 'block';
+                    uploadPlaceholder.style.display = 'none';
+                    predictBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        predictBtn.addEventListener('click', async () => {
+            if (!imagePreview.src || imagePreview.style.display === 'none') return;
+            predictBtn.disabled = true;
+            predictBtn.innerHTML = '<span class="loading"></span> 识别中...';
+            try {
+                const result = await predictFromImage(imagePreview.src);
+                displayResult(result);
+                addHistory(result);
+            } catch (err) {
+                console.error('识别失败:', err);
+                alert('识别失败，请重试');
+            }
+            predictBtn.disabled = false;
+            predictBtn.innerHTML = '<span>🔍</span> 开始识别';
+        });
+        clearHistoryBtn.addEventListener('click', () => {
+            historyData = [];
+            renderHistory();
+        });
+        async function predictFromImage(dataUrl) {
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl })
+            });
+            if (!response.ok) throw new Error('Prediction failed');
+            return response.json();
+        }
+        function startAutoPredict() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 640;
+            canvas.height = 480;
+            autoPredictInterval = setInterval(async () => {
+                if (!isCameraRunning || !stream) return;
+                ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                try {
+                    const result = await predictFromImage(dataUrl);
+                    displayResult(result);
+                    addHistory(result);
+                } catch (err) {
+                    console.error('Auto predict error:', err);
+                }
+            }, 1000);
+        }
+        function displayResult(result) {
+            const config = EMOTION_CONFIG[result.emotion] || EMOTION_CONFIG.happy;
+            const probs = result.probabilities || {};
+            resultContent.innerHTML = (
+                '<div class="emotion-emoji">' + config.emoji + '</div>' +
+                '<div class="emotion-name" style="color:' + config.color + '">' + result.emotion + '</div>' +
+                '<div class="emotion-message">' + config.message + '</div>' +
+                '<div class="probability-grid">' +
+                '<div class="probability-item"><div class="label">happy</div><div class="value" style="color:#4CAF50">' + (probs.happy*100).toFixed(1) + '%</div></div>' +
+                '<div class="probability-item"><div class="label">cry</div><div class="value" style="color:#2196F3">' + (probs.cry*100).toFixed(1) + '%</div></div>' +
+                '<div class="probability-item"><div class="label">angry</div><div class="value" style="color:#F44336">' + (probs.angry*100).toFixed(1) + '%</div></div>' +
+                '</div>'
+            );
+        }
+        function addHistory(result) {
+            const config = EMOTION_CONFIG[result.emotion] || EMOTION_CONFIG.happy;
+            const entry = {
+                emoji: config.emoji,
+                emotion: result.emotion,
+                confidence: result.confidence,
+                time: new Date().toLocaleTimeString('zh-CN')
+            };
+            historyData.unshift(entry);
+            if (historyData.length > 10) historyData.pop();
+            renderHistory();
+        }
+        function renderHistory() {
+            if (historyData.length === 0) {
+                historyList.innerHTML = '<div class="empty-history"><p>暂无历史记录</p></div>';
+                return;
+            }
+            historyList.innerHTML = historyData.map(item => (
+                '<div class="history-item">' +
+                '<div class="history-emoji">' + item.emoji + '</div>' +
+                '<div class="history-info">' +
+                '<div class="history-emotion">' + item.emotion + '</div>' +
+                '<div class="history-confidence">' + (item.confidence*100).toFixed(1) + '%</div>' +
+                '</div>' +
+                '<div class="history-time">' + item.time + '</div>' +
+                '</div>'
+            )).join('');
+        }
+    </script>
+</body>
+</html>
